@@ -1,0 +1,79 @@
+---
+title: "Causal Project"
+author: "Emma Anderson"
+date: "2024-04-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(shiny)
+library(lubridate)
+library(knitr)
+library(ggplot2)
+#library(plyr) # for count function
+library(kableExtra)
+library(tidyr)
+library(dplyr)
+library(tidyverse)
+setwd("~/Documents/Class/Causal/Project")
+```
+
+
+```{r reading in and cleaning}
+#exposure   
+benzene <- read_xpt("P_UVOC2.XPT")
+#limit of detection 9.81 
+colnames(benzene)
+benzene<-benzene[,-c(2,4:6)]
+#outcome
+repro <- read_xpt("P_RHQ.XPT")
+repro <- repro[,-c(2:14, 16:17, 19:32)]
+#covariates
+smoking <- read_xpt("P_SMQ.XPT")
+smoking <- smoking[,-c(2:3, 5:16)]
+demographic <- read_xpt("P_DEMO.XPT")
+colnames(demographic)
+demographic <- demographic %>% filter(RIAGENDR==2)
+demographic <- demographic[,-c(2:4,6,9:11,13:28)]
+
+#merge 
+merged_data <- merge(benzene, repro, by = "SEQN")
+merged_data <- merge(merged_data, smoking, by = "SEQN")
+merged_data <- merge(merged_data, demographic, by = "SEQN")
+
+colnames(merged_data)
+
+merged_data <- merged_data %>%
+  rename(benzene = URXMUCA,
+         diabetes = RHQ162, 
+         baby_weight = RHQ172, 
+         smoking = SMQ040, 
+         age = RIDAGEYR, 
+         race_1 = RIDRETH1, 
+         race_2 = RIDRETH3, 
+         education = DMDEDUC2, 
+         income = INDFMPIR
+         )
+
+merged_data <- merged_data[!is.na(merged_data$benzene) & !is.na(merged_data$diabetes), ]
+
+#make benzene binary with median 48.15
+summary(merged_data$benzene)
+
+merged_data <- merged_data %>% 
+  mutate(
+    benzene_binary = ifelse(benzene <= 48.15, "Benzene Low", "Benzene High")
+  )
+
+table(merged_data$diabetes, merged_data$benzene_binary)
+
+
+```
+
+
+```{r pressure, echo=FALSE}
+
+```
+
+
