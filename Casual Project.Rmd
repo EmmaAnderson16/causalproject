@@ -16,6 +16,8 @@ library(kableExtra)
 library(tidyr)
 library(dplyr)
 library(tidyverse)
+library(haven)
+library(tableone)
 setwd("~/Documents/Github/causalproject")
 ```
 
@@ -28,19 +30,22 @@ colnames(benzene)
 benzene<-benzene[,-c(2,4:6)]
 #outcome
 repro <- read_xpt("P_RHQ.XPT")
-repro <- repro[,-c(2:14, 16:17, 19:32)]
+repro$diabetes_binary <- ifelse(repro$RHQ162 == 2, 0, 1)
+repro <- repro[,-c(2:17, 19:32)] 
 #covariates
 smoking <- read_xpt("P_SMQ.XPT")
-smoking <- smoking[,-c(3:16)]
+smoking$smoke_binary <- ifelse(smoking$SMQ020 == 2, 0, 1)
+smoking <- smoking[,-c(2:16)]
 demographic <- read_xpt("P_DEMO.XPT")
 colnames(demographic)
 demographic <- demographic %>% filter(RIAGENDR==2)
-demographic <- demographic[,-c(2:4,6,9:11,13:28)]
+demographic <- demographic[,-c(2:4,6:7,9:11,13:28)]
 care <- read_xpt("P_HUQ.XPT")
 care$care_binary <- ifelse(care$HUQ030 == 2, 1, 0)
 care <- care[,-c(2:7)]
+```
 
-
+```{r}
 #merge 
 merged_data <- merge(benzene, repro, by = "SEQN")
 merged_data <- merge(merged_data, smoking, by = "SEQN")
@@ -51,12 +56,11 @@ colnames(merged_data)
 
 merged_data <- merged_data %>%
   rename(benzene = URXMUCA,
-         diabetes = RHQ162, 
+         diabetes = diabetes_binary, 
          baby_weight = RHQ172, 
-         smoking = SMQ020, 
+         smoking = smoke_binary, 
          age = RIDAGEYR, 
-         race_1 = RIDRETH1, 
-         race_2 = RIDRETH3, 
+         race = RIDRETH3, 
          education = DMDEDUC2, 
          income = INDFMPIR,
          access_care = care_binary
@@ -76,6 +80,43 @@ table(merged_data$diabetes, merged_data$benzene_binary)
 
 
 ```
+
+```{r}
+merged_data <- merged_data %>% 
+    mutate(race_category = case_when(
+        race %in% c(1,2) ~ "Hispanic",
+        race == 3 ~ "Non-Hispanic White",
+        race == 4 ~ "Non-Hispanic Black",
+        race == 6 ~ "Non-Hispanic Asian",
+        race == 7 ~ "Other"
+    ))
+
+merged_data <- merged_data %>% 
+    mutate(education_category = case_when(
+        education %in% c(1,2) ~ "Less than high school",
+        education == 3 ~ "High school diploma",
+        education == 4 ~ "Some college",
+        education == 5 ~ "College graduate or above"
+    ))
+```
+
+```{r}
+final_data <- merged_data[,c(1:6,9:13)]
+```
+
+```{r table1}
+table.1.vars <- c("benzene_binary", "diabetes", "smoking", "age", "race_category", "education_category", "income", "access_care")
+    
+table.1.fvars <- c("race_category", "education_category", "diabetes", "smoking", "access_care")
+    
+table.1 <- CreateTableOne(vars = table.1.vars, 
+                          strata = "benzene_binary",
+                          factorVars = table.1.fvars,
+                          data = final_data, includeNA=FALSE,
+                          test=FALSE, addOverall=TRUE)
+print(table.1)
+```
+
 
 
 
