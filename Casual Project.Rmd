@@ -118,7 +118,32 @@ print(table.1)
 ```
 
 
+```{r, IPW}
+##### Inverse probability weighting
+final_data <- final_data %>% 
+  mutate(
+    benzene_numerical = ifelse(benzene_binary == "Low", 0, 1)
+  )
+model.reg <- glm(benzene_numerical ~ smoking + age + income + access_care + race_category, family=binomial, 
+               data=final_data) 
+summary(model.reg)
+#Estimate predicted probabilities of observed:
+prob.1W <- predict(model.reg, type="response") # Predicted probability of observed
+prob.0W <- 1-prob.1W # Predicted probability of not having diabetes 
 
+summary(prob.1W)
+summary(prob.0W)
 
-
+#weights
+wt1 <- as.numeric(final_data$benzene_numerical==1)/prob.1W
+wt0 <- as.numeric(final_data$benzene_numerical==0)/prob.0W
+summary(wt1)
+summary(wt0)
+#point estimates 
+IPW<- mean(wt1*final_data$diabetes) - mean( wt0*final_data$diabetes)
+IPW
+mean( (wt1-wt0)*final_data$diabetes)
+#Stabilized IPW estimator - Modified Horvitz-Thompson estimator
+mean(wt1*final_data$diabetes)/mean( wt1) - mean( wt0*final_data$diabetes)/mean( wt0)
+```
 
