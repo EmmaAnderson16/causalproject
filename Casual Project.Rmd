@@ -102,6 +102,9 @@ merged_data <- merged_data %>%
 
 ```{r}
 final_data <- merged_data[,c(1:6,9:13)]
+
+final_data2 <- final_data[complete.cases(final_data), ]
+
 ```
 
 ```{r table1}
@@ -115,6 +118,29 @@ table.1 <- CreateTableOne(vars = table.1.vars,
                           data = final_data, includeNA=FALSE,
                           test=FALSE, addOverall=TRUE)
 print(table.1)
+```
+G-comp
+```{r}
+final_data2 <- final_data2 %>% 
+  mutate(
+    benzene_numerical = ifelse(benzene_binary == "Low", 0, 1)
+  )
+
+
+reg.model <- glm(diabetes ~ benzene_numerical + baby_weight + smoking + age + income + access_care + race_category + education_category, family='binomial', data=final_data2)
+summary(reg.model)
+```
+
+```{r}
+exposed <- unexposed <- final_data2
+
+exposed$benzene_numerical <- 1
+unexposed$benzene_numerical <- 0
+
+predictY.exposed<- predict(reg.model, newdata = exposed, type='response')
+predictY.unexposed<- predict(reg.model, newdata = unexposed, type='response')
+
+mean(predictY.exposed - predictY.unexposed)
 ```
 
 
