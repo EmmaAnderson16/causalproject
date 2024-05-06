@@ -18,9 +18,8 @@ library(dplyr)
 library(tidyverse)
 library(haven)
 library(tableone)
-setwd("~/Documents/Github/causalproject")
+# setwd("~/Documents/Github/causalproject")
 ```
-
 
 ```{r reading in and cleaning}
 #exposure   
@@ -117,7 +116,6 @@ table.1 <- CreateTableOne(vars = table.1.vars,
 print(table.1)
 ```
 
-
 ```{r, IPW}
 ##### Inverse probability weighting
 final_data <- final_data %>% 
@@ -147,3 +145,142 @@ mean( (wt1-wt0)*final_data$diabetes)
 mean(wt1*final_data$diabetes)/mean( wt1) - mean( wt0*final_data$diabetes)/mean( wt0)
 ```
 
+```{r}
+final_data <- final_data[, !(names(final_data) %in% c("baby_weight", "income"))]
+
+                          
+```
+
+```{r}
+SL.library<- c("SL.mean", "SL.glm", "SL.step.interaction")
+```
+
+```{r}
+X<-subset(final_data, select=c(benzene_numerical, age, race_category, access_care ))
+X1 <- X0 <- X
+
+```
+
+```{r}
+X1$benzene_numerical <- 1
+X0$benzene_numerical <- 0
+```
+
+```{r}
+SL.outcome<- SuperLearner(Y=final_data$diabetes, X=X, SL.library=SL.library, family="binomial")
+SL.outcome
+```
+
+```{r}
+expY.givenAW <- predict(SL.outcome, newdata=X)$pred
+```
+
+```{r}
+expY.given1W<- predict(SL.outcome, newdata=X1)$pred
+```
+
+```{r}
+expY.given0W<- predict(SL.outcome, newdata=X0)$pred
+```
+
+```{r}
+tail(data.frame(A=final_data$diabetes, expY.givenAW, expY.given1W, expY.given0W))
+
+```
+
+```{r}
+PsiHat.SS<-mean(expY.given1W - expY.given0W)
+PsiHat.SS
+```
+
+```{r}
+X <- subset(final_data, select= -c(benzene_numerical,diabetes))
+```
+
+```{r}
+SL.exposure<- SuperLearner(Y=final_data$diabetes, X=X, SL.library=SL.library, family="binomial")
+SL.exposure
+```
+
+```{r}
+probA1.givenW<- SL.exposure$SL.predict
+```
+
+```{r}
+check <- predict(SL.exposure, newdata = X)$pred
+sum(probA1.givenW != check)
+```
+
+```{r}
+probA0.givenW<- 1- probA1.givenW
+```
+
+```{r}
+summary(data.frame(probA1.givenW, probA0.givenW))
+```
+
+```{r}
+H.AW<- as.numeric(final_data$benzene_numerical==1)/probA1.givenW - as.numeric(final_data$benzene_numerical==0)/probA0.givenW
+```
+
+```{r}
+H.1W<- 1/probA1.givenW
+H.0W<- -1/probA0.givenW
+tail(data.frame(final_data$benzene_numerical, H.AW, H.1W, H.0W))
+```
+
+```{r}
+PsiHat.IPW <-mean( H.AW*final_data$diabetes)
+PsiHat.IPW
+```
+
+```{r}
+logitUpdate<- glm(final_data$diabetes ~ -1 +offset(qlogis(expY.givenAW)) + H.AW, family='binomial')
+epsilon <- logitUpdate$coef
+epsilon
+```
+
+```{r}
+expY.givenAW.star<- plogis(qlogis(expY.givenAW)+ epsilon*H.AW)
+expY.given1W.star<- plogis(qlogis(expY.given1W)+ epsilon*H.1W)
+expY.given0W.star<- plogis(qlogis(expY.given0W)+ epsilon*H.0W)
+```
+
+```{r}
+coef(glm(final_data$diabetes ~ -1 +offset(qlogis(expY.givenAW.star)) + H.AW, family="binomial"))
+```
+
+```{r}
+PsiHat.TMLE <- mean(expY.given1W.star - expY.given0W.star)
+c(PsiHat.SS, PsiHat.IPW, PsiHat.TMLE)
+```
+
+```{r}
+H.1W <- as.numeric(final_data$diabetes==1)/probA1.givenW
+H.0W <-  as.numeric(final_data$diabetes==0)/probA0.givenW
+# target
+logitUpdate<- glm(final_data$diabetes~ -1 +offset(qlogis(expY.givenAW)) + H.0W + H.1W, family="binomial")
+eps<-logitUpdate$coef
+eps
+
+```
+
+```{r}
+# obtain the targeted estimates
+expY.givenAW.star <- plogis(qlogis(expY.givenAW) + eps['H.0W']*H.0W + eps['H.1W']*H.1W)
+expY.given1W.star <- plogis( qlogis(expY.given1W) + eps['H.1W']/probA1.givenW )
+expY.given0W.star <- plogis( qlogis(expY.given0W) + eps['H.0W']/probA0.givenW )
+TMLE2 <- data.frame(cbind(
+psi1 = mean(expY.given1W.star),
+psi0 = mean(expY.given0W.star),
+diff = mean(expY.given1W.star) - mean(expY.given0W.star),
+ratio = mean(expY.given1W.star) /mean(expY.given0W.star)
+))
+TMLE2
+
+```
+
+```         
+```
+
+your_function_name(dt=final_table, SL.library=SL.library)
