@@ -18,7 +18,7 @@ library(dplyr)
 library(tidyverse)
 library(haven)
 library(tableone)
-setwd("~/Documents/Github/causalproject")
+#setwd("~/Documents/Github/causalproject")
 ```
 
 
@@ -141,6 +141,14 @@ predictY.exposed<- predict(reg.model, newdata = exposed, type='response')
 predictY.unexposed<- predict(reg.model, newdata = unexposed, type='response')
 
 mean(predictY.exposed - predictY.unexposed)
+```
+
+Unadjusted estimator
+```{r}
+unadjusted <- mean(final_data2$benzene_numerical == 1) - mean(final_data2$benzene_numerical == 0)
+
+unadjusted
+
 ```
 
 
