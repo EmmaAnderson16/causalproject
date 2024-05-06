@@ -398,7 +398,7 @@ for(b in 1:B){
 +
 + # sample the indices 1 to n with replacement
 + index.boot<- sample(1:n, replace=T)
-+ dt.boot<- dt[index.boot,]
++ dt.boot<- final_data[index.boot,]
 +
 + # calling the above function
 + est.boot[b,] <- run.tmle(dt=dt.boot, SL.library=SL.library)$estimates
