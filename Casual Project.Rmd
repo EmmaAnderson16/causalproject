@@ -127,7 +127,7 @@ final_data2 <- final_data2 %>%
   )
 
 
-reg.model <- glm(diabetes ~ benzene_numerical + baby_weight + smoking + age + income + access_care + race_category + education_category, family='binomial', data=final_data2)
+reg.model <- glm(diabetes ~ benzene_numerical + smoking + age + income + access_care + race_category + education_category, family='binomial', data=final_data2)
 summary(reg.model)
 ```
 
