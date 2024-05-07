@@ -286,12 +286,13 @@ run.tmle <- function(dt, SL.library){
 Assessing the point estimates from the function
 
 ```{r}
+set.seed(1)
 #final <- subset(final_data2, select=c("diabetes", "smoking", "age", "income", "access_care", "race_category", "education_category", "benzene_numerical"))
 
 final <- subset(final_data2, select=-c(SEQN, benzene, baby_weight, benzene_binary))
 
 out <- run.tmle(dt=final, SL.library=SL.library)
-round(out$estimates*100, 5)
+round(out$estimates, 5)
 ```
 
 
